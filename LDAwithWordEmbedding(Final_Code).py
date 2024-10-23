@@ -110,7 +110,7 @@ df['topic'] = topics
 
 # Count Topic Occurrences
 topic_counts = df['topic'].value_counts()
-print("Topic Counts:")
+print("Topic Counts and No. of Document mapped:")
 print(topic_counts)
 
 # Print Traditional LDA Topics
@@ -170,7 +170,7 @@ df['enhanced_topic'] = [assign_enhanced_topic(doc_vector, enhanced_topic_vectors
 
 # Count Enhanced Topic Occurrences
 enhanced_topic_counts = df['enhanced_topic'].value_counts()
-print("Enhanced Topic Counts:")
+print("Enhanced Topic Counts and No. of Document mapped:")
 print(enhanced_topic_counts)
 
 # Print Enhanced LDA Topics with Word Embeddings
