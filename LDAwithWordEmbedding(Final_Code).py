@@ -16,17 +16,22 @@ from sklearn.decomposition import PCA
 ######################################################################################################
 # Preprocess the text data
 def preprocess_text(text):
-    tokens = word_tokenize(text.lower())
-    stop_words = set(stopwords.words('english'))
-    additional_stopwords = {"'s", "``", "''"}
-    stop_words = stop_words.union(additional_stopwords)
-    
-    filtered_tokens = []
-    for token in tokens:
-        if token not in stop_words and token not in string.punctuation:
-            filtered_tokens.append(token)
-    
-    return filtered_tokens
+    # Check if the input is a string
+    if isinstance(text, str):
+        tokens = word_tokenize(text.lower())
+        stop_words = set(stopwords.words('english'))
+        additional_stopwords = {"'s", "``", "''"}
+        stop_words = stop_words.union(additional_stopwords)
+        
+        filtered_tokens = []
+        for token in tokens:
+            # Filter out stopwords and punctuation
+            if token not in stop_words and token not in string.punctuation:
+                filtered_tokens.append(token)
+        
+        return filtered_tokens
+    else:
+        return []  # Return an empty list for non-string inputs (e.g., NaN)
 
 
 # Calculate Topic Coherence
@@ -67,7 +72,7 @@ def get_document_embedding(document, word2vec_model):
 ######################################################################################################
 
 # Load the data from CSV
-output_csv = 'bbc_news_20220307_20240703.csv'
+output_csv = r'D:\MTECH\3rd Semester\7_ECIR2024_conference\Amazon Reviwe\Amazon.csv'
 df = pd.read_csv(output_csv)
 
 # Display the first few rows to understand the structure of your data
@@ -75,11 +80,15 @@ print("Head of the DataFrame:")
 print(df.head())
 
 # Preprocess the text
-df['processed_text'] = [preprocess_text(description) for description in df['description']]
+df['processed_text'] = [preprocess_text(Review_Text) for Review_Text in df['Review_Text']]
 
 # Train a Word2Vec model on the processed text
 word2vec_model = Word2Vec(sentences=df['processed_text'])
 
+print('###################################')
+print(df)
+
+print('###################################')
 # Create a Gensim Dictionary and Corpus
 dictionary = corpora.Dictionary(df['processed_text'])
 dictionary.filter_extremes(no_above=0.5)
@@ -129,21 +138,22 @@ print(f"\nTraditional LDA Coherence Score: {traditional_coherence_score}")
 ################################### Enhanced LDA ##################################################
 # Generate document vectors using Word2Vec embeddings
 document_vectors = []
-for doc in df['processed_text']:
+valid_indices = []  # To keep track of valid rows
+
+for idx, doc in enumerate(df['processed_text']):
     vector = get_document_embedding(doc, word2vec_model)
     if vector is not None and len(vector) > 0:
         document_vectors.append(vector)
+        valid_indices.append(idx)  # Store the index of rows with valid document vectors
 
-df['document_vector'] = document_vectors
+# Filter df to only include rows with valid document vectors
+df = df.loc[valid_indices].reset_index(drop=True)
 
-# Filter out rows with None document_vector
-df = df.dropna(subset=['document_vector'])
-
-document_vectors = np.array(document_vectors)
-
-# Ensure document_vectors array is valid
-if document_vectors.size == 0:
-    raise ValueError("No valid document vectors found.")
+# Ensure that the number of document vectors matches the number of rows in df
+if len(document_vectors) == len(df):
+    df['document_vector'] = document_vectors
+else:
+    raise ValueError(f"Length of document_vectors ({len(document_vectors)}) does not match DataFrame ({len(df)})")
 
 # Build Enhanced LDA model using document vectors
 enhanced_corpus = [dictionary.doc2bow(doc) for doc in df['processed_text']]
